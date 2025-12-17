@@ -2,8 +2,6 @@ package com.example.InsurAI.config;
 
 import com.example.InsurAI.security.JwtAuthenticationFilter;
 import com.example.InsurAI.security.JwtTokenProvider;
-import com.example.InsurAI.service.CustomOAuth2UserService;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
@@ -27,13 +25,11 @@ import java.util.List;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    private final CustomOAuth2UserService customOAuth2UserService;
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityConfig(CustomOAuth2UserService customOAuth2UserService,
-                          JwtTokenProvider jwtTokenProvider, JwtAuthenticationFilter jwtAuthenticationFilter) {
-        this.customOAuth2UserService = customOAuth2UserService;
+    public SecurityConfig(JwtTokenProvider jwtTokenProvider,
+                          JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
@@ -45,34 +41,12 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/register",
-                                "/api/auth/login",
-                                "/oauth2/**",
-                                "/login/oauth2/**",
-                                "/error"
-                        ).permitAll()
+                        .requestMatchers("/api/auth/register", "/api/auth/login", "/error").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
-                // For API calls, return 401 instead of redirecting to Google
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            // If it's an API request (starts with /api/), send 401 JSON
-                            String path = request.getRequestURI();
-                            if (path != null && path.startsWith("/api/")) {
-                                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                                response.setContentType("application/json");
-                                response.getWriter().write("{\"error\":\"Unauthorized\"}");
-                            } else {
-                                // For normal browser flows, keep default behavior
-                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
-                            }
-                        })
-                )
-                .oauth2Login(oauth2 -> oauth2
-                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-                        .successHandler(this::oauth2SuccessHandler)
+                        .authenticationEntryPoint(this::handleAuthEntryPoint)
                 )
                 .formLogin(form -> form.disable())
                 .logout(logout -> logout
@@ -81,15 +55,22 @@ public class SecurityConfig {
                 );
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
-    private void oauth2SuccessHandler(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            org.springframework.security.core.Authentication authentication
-    ) throws IOException, ServletException {
-        response.sendRedirect("http://localhost:3000/?from=google");
+    private void handleAuthEntryPoint(HttpServletRequest request,
+                                      HttpServletResponse response,
+                                      org.springframework.security.core.AuthenticationException authException)
+            throws IOException {
+        String path = request.getRequestURI();
+        if (path != null && path.startsWith("/api")) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\":\"Unauthorized\"}");
+        } else {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+        }
     }
 
     @Bean
@@ -107,7 +88,6 @@ public class SecurityConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
         return new CorsFilter(source);
     }
 }
