@@ -50,10 +50,8 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-
     @Column(nullable = false)
     private boolean enabled = true;
-
 
     @PrePersist
     public void prePersist() {
@@ -66,4 +64,5 @@ public class User {
     public void preUpdate() {
         updatedAt = Instant.now();
     }
+
 }

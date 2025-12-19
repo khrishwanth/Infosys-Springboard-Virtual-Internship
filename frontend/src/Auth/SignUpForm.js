@@ -13,9 +13,6 @@ function SignUpForm({ onSignUp, onShowLogin }) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:8080/oauth2/authorization/google";
-  };
 
   const validatePhone = (value) => {
     const digitsOnly = value.replace(/\D/g, "");
@@ -191,15 +188,6 @@ function SignUpForm({ onSignUp, onShowLogin }) {
             <span style={s.dividerText}>or</span>
             <span style={s.dividerLine} />
           </div>
-
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            style={s.googleButton}
-          >
-            <FcGoogle size={20} style={{ marginRight: 8 }} />
-            Google
-          </button>
 
           <p style={s.switchText}>
             Already have an account?{" "}

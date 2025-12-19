@@ -7,8 +7,10 @@ import com.example.InsurAI.repository.PolicyPlanRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -17,7 +19,7 @@ public class AdminPolicyService {
     private final PolicyPlanRepository policyPlanRepository;
 
     @Transactional(readOnly = true)
-    public List<PolicyPlanDto> listAll() {
+    public List<PolicyPlanDto> listAllPlans() {
         return policyPlanRepository.findAll()
                 .stream()
                 .map(this::toDto)
@@ -25,7 +27,7 @@ public class AdminPolicyService {
     }
 
     @Transactional
-    public PolicyPlanDto create(PolicyPlanCreateUpdateRequest req) {
+    public PolicyPlanDto createPlan(PolicyPlanCreateUpdateRequest req) {
         PolicyPlan plan = new PolicyPlan();
         apply(plan, req);
         PolicyPlan saved = policyPlanRepository.save(plan);
@@ -33,7 +35,7 @@ public class AdminPolicyService {
     }
 
     @Transactional
-    public PolicyPlanDto update(Long id, PolicyPlanCreateUpdateRequest req) {
+    public PolicyPlanDto updatePlan(Long id, PolicyPlanCreateUpdateRequest req) {
         PolicyPlan plan = policyPlanRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Policy plan not found: " + id));
         apply(plan, req);
@@ -57,6 +59,50 @@ public class AdminPolicyService {
                 .map(this::toDto)
                 .toList();
     }
+
+    public void deletePlan(Long id) {
+        if (!policyPlanRepository.existsById(id)) {
+            throw new IllegalArgumentException("Plan not found");
+        }
+        policyPlanRepository.deleteById(id);
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class PolicyCategoryStat {
+        private String category;
+        private long totalPolicies;
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class PolicyUsageStat {
+        private String category;
+        private long usageCount;
+    }
+
+    @Transactional(readOnly = true)
+    public List<PolicyCategoryStat> getCategoryStats() {
+        return policyPlanRepository.findCategoryTotals()
+                .stream()
+                .map(row -> new PolicyCategoryStat(
+                        (String) row[0],
+                        ((Number) row[1]).longValue()
+                ))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PolicyUsageStat> getUsageStats() {
+        return policyPlanRepository.findCategoryTotals()
+                .stream()
+                .map(row -> new PolicyUsageStat(
+                        (String) row[0],
+                        0L
+                ))
+                .toList();
+    }
+
 
     private void apply(PolicyPlan plan, PolicyPlanCreateUpdateRequest req) {
         plan.setName(req.getName());

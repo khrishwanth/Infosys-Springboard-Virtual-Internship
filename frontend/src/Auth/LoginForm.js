@@ -8,10 +8,6 @@ function LoginForm({ onShowRegister, onLoginSuccess }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:8080/oauth2/authorization/google";
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -134,21 +130,6 @@ function LoginForm({ onShowRegister, onLoginSuccess }) {
               {loading ? "Signing in..." : "Sign in"}
             </button>
           </form>
-
-          <div style={styles.dividerRow}>
-            <span style={styles.dividerLine} />
-            <span style={styles.dividerText}>or</span>
-            <span style={styles.dividerLine} />
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            style={styles.googleButton}
-          >
-            <FcGoogle size={20} style={{ marginRight: 8 }} />
-            Google
-          </button>
         </div>
       </div>
     </div>

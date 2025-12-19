@@ -6,7 +6,7 @@ import StepDetailsConfirm from "./StepDetailsConfirm";
 
 
 
-function AppointmentSchedulingPage({ onGoHome }) {
+function AppointmentSchedulingPage({ onGoHome, auth, onLogout, selectedPlan }) {
   const [step, setStep] = useState(1);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [selectedDate, setSelectedDate] = useState("");

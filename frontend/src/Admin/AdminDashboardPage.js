@@ -1,7 +1,7 @@
 // src/pages/AdminDashboardPage.js
 import React, { useEffect, useState } from "react";
 import TopNav from "../styles/TopNav";
-import { apiFetch } from "../apiClient";
+import {apiFetch} from "../apiClient";
 import AdminKpiRow from "./AdminKpiRow";
 import AdminChartsPanel from "./AdminChartsPanel";
 import AdminManagementPanel from "./AdminManagementPanel";
@@ -13,8 +13,7 @@ function AdminDashboardPage() {
   const [appointmentStats, setAppointmentStats] = useState([]);
   const [recentAppointments, setRecentAppointments] = useState([]);
   const [latestUsers, setLatestUsers] = useState([]);
-
-  const [activeSection, setActiveSection] = useState("dashboard"); // dashboard | users | policies | appointments
+  const [activeSection, setActiveSection] = useState("dashboard"); // "dashboard" | "users" | "policies"
   const [sidePanelContent, setSidePanelContent] = useState(null);
 
   const [loading, setLoading] = useState(false);
@@ -36,12 +35,8 @@ function AdminDashboardPage() {
           recentApptsRes,
           latestUsersRes,
         ] = await Promise.all([
-          apiFetch(
-            "http://localhost:8080/api/admin/users/dashboard/summary"
-          ),
-          apiFetch(
-            "http://localhost:8080/api/admin/users/stats/daily?days=14"
-          ),
+          apiFetch("http://localhost:8080/api/admin/users/dashboard/summary"),
+          apiFetch("http://localhost:8080/api/admin/users/stats/daily?days=14"),
           apiFetch(
             "http://localhost:8080/api/admin/users/appointments/daily?days=14"
           ),
@@ -55,9 +50,7 @@ function AdminDashboardPage() {
 
         setSummary(summaryRes || null);
         setUserStats(Array.isArray(dailyUsersRes) ? dailyUsersRes : []);
-        setAppointmentStats(
-          Array.isArray(dailyApptsRes) ? dailyApptsRes : []
-        );
+        setAppointmentStats(Array.isArray(dailyApptsRes) ? dailyApptsRes : []);
         setRecentAppointments(
           Array.isArray(recentApptsRes) ? recentApptsRes : []
         );
@@ -68,7 +61,9 @@ function AdminDashboardPage() {
           setError("Could not load dashboard data. Please try again.");
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
@@ -76,28 +71,28 @@ function AdminDashboardPage() {
       try {
         setChartsLoading(true);
         const [dailyUsersRes, dailyApptsRes] = await Promise.all([
-          apiFetch(
-            "http://localhost:8080/api/admin/users/stats/daily?days=14"
-          ),
+          apiFetch("http://localhost:8080/api/admin/users/stats/daily?days=14"),
           apiFetch(
             "http://localhost:8080/api/admin/users/appointments/daily?days=14"
           ),
         ]);
+
         if (cancelled) return;
+
         setUserStats(Array.isArray(dailyUsersRes) ? dailyUsersRes : []);
-        setAppointmentStats(
-          Array.isArray(dailyApptsRes) ? dailyApptsRes : []
-        );
+        setAppointmentStats(Array.isArray(dailyApptsRes) ? dailyApptsRes : []);
       } catch (err) {
         console.error("Failed to refresh charts", err);
       } finally {
-        if (!cancelled) setChartsLoading(false);
+        if (!cancelled) {
+          setChartsLoading(false);
+        }
       }
     }
 
     loadDashboard();
+    const intervalId = setInterval(loadChartsOnly, 60000); // refresh charts every 60s
 
-    const intervalId = setInterval(loadChartsOnly, 60_000); // refresh charts every 60s
     return () => {
       cancelled = true;
       clearInterval(intervalId);
@@ -111,7 +106,7 @@ function AdminDashboardPage() {
         "radial-gradient(circle at top left, rgba(59,130,246,0.14), rgba(15,23,42,1))",
       color: "#e5e7eb",
       fontFamily:
-        "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+        'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
     },
     main: {
       maxWidth: "1280px",
@@ -233,7 +228,7 @@ function AdminDashboardPage() {
         ? "1px solid rgba(59,130,246,0.9)"
         : "1px solid transparent",
       background: active
-        ? "linear-gradient(to right, rgba(37,99,235,0.7), rgba(129,140,248,0.6))"
+        ? "linear-gradient(to right, rgba(37,99,235,0.7), rgba(129,140,248,0.6), transparent)"
         : "transparent",
       color: active ? "#e5e7eb" : "#9ca3af",
       cursor: "pointer",
@@ -247,61 +242,61 @@ function AdminDashboardPage() {
 
   const kpiStats = summary
     ? {
-        appointments: {
-          today: summary.todaysAppointments || 0,
-          last7Days: summary.last7DaysAppointments || 0,
-          allTime: summary.allTimeAppointments || 0,
-        },
+        appointmentsToday: summary.todaysAppointments || 0,
+        last7Days: summary.last7DaysAppointments || 0,
+        allTime: summary.allTimeAppointments || 0,
         customers: summary.totalCustomers || 0,
         agents: summary.totalAgents || 0,
         plans: summary.totalPlans || 0,
       }
-    : null;
+    : {
+        appointmentsToday: 0,
+        last7Days: 0,
+        allTime: 0,
+        customers: 0,
+        agents: 0,
+        plans: 0,
+      };
 
   const handleAppointmentRowClick = (appt) => {
-    setSidePanelContent({
-      type: "appointment",
-      data: appt,
-    });
+    setSidePanelContent({ type: "appointment", data: appt });
   };
 
   const handleUserRowClick = (user) => {
-    setSidePanelContent({
-      type: "user",
-      data: user,
-    });
+    setSidePanelContent({ type: "user", data: user });
   };
 
   const renderMainSection = () => {
     if (activeSection === "users") {
-      return <AdminManagementPanel mode="users" />;
+      return <AdminManagementPanel mode="users" onSelectItem={handleUserRowClick} />;
     }
     if (activeSection === "policies") {
-      return <AdminManagementPanel mode="policies" />;
-    }
-    if (activeSection === "appointments") {
-      return <AdminManagementPanel mode="appointments" />;
+      return (
+        <AdminManagementPanel
+          mode="policies"
+          onSelectItem={(item) =>
+            setSidePanelContent({ type: "policy", data: item })
+          }
+        />
+      );
     }
 
-    // default: dashboard content
+    // default dashboard content
     return (
       <>
         <AdminKpiRow
           stats={kpiStats}
           loading={loading}
           onCardClick={(target) => {
-            if (target === "appointments") setActiveSection("appointments");
             if (target === "customers") setActiveSection("users");
             if (target === "plans") setActiveSection("policies");
           }}
         />
-
         <AdminChartsPanel
           userStats={userStats}
           appointmentStats={appointmentStats}
           loading={chartsLoading}
         />
-
         <div style={styles.sectionShell}>
           <div style={styles.sectionHeader}>
             <span style={styles.sectionTitle}>Recent appointments</span>
@@ -309,38 +304,43 @@ function AdminDashboardPage() {
               Last 10 created, across all customers and agents.
             </span>
           </div>
-
-          <div style={styles.tableWrapper}>
-            {recentAppointments.length === 0 ? (
-              <div style={styles.empty}>No recent appointments found.</div>
-            ) : (
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>ID</th>
-                    <th style={styles.th}>Customer</th>
-                    <th style={styles.th}>Agent</th>
-                    <th style={styles.th}>Scheduled</th>
-                    <th style={styles.th}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentAppointments.map((a) => (
-                    <tr key={a.id} onClick={() => handleAppointmentRowClick(a)}>
-                      <td style={styles.td}>{a.id}</td>
-                      <td style={styles.td}>{a.customerName || a.customerId}</td>
-                      <td style={styles.td}>{a.agentName || a.agentId || "—"}</td>
-                      <td style={styles.td}>
-                        {a.scheduledAt
-                          ? new Date(a.scheduledAt).toLocaleString()
-                          : "Not scheduled"}
-                      </td>
-                      <td style={styles.td}>{a.status || "—"}</td>
+          <div>
+            <div style={styles.tableWrapper}>
+              {recentAppointments.length === 0 ? (
+                <div style={styles.empty}>No recent appointments found.</div>
+              ) : (
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>ID</th>
+                      <th style={styles.th}>Customer</th>
+                      <th style={styles.th}>Agent</th>
+                      <th style={styles.th}>Scheduled</th>
+                      <th style={styles.th}>Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                  </thead>
+                  <tbody>
+                    {recentAppointments.map((a) => (
+                      <tr key={a.id} onClick={() => handleAppointmentRowClick(a)}>
+                        <td style={styles.td}>{a.id}</td>
+                        <td style={styles.td}>
+                          {a.customerName} ({a.customerId})
+                        </td>
+                        <td style={styles.td}>
+                          {a.agentName} {a.agentId ? `(${a.agentId})` : ""}
+                        </td>
+                        <td style={styles.td}>
+                          {a.scheduledAt
+                            ? new Date(a.scheduledAt).toLocaleString()
+                            : "Not scheduled"}
+                        </td>
+                        <td style={styles.td}>{a.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       </>
@@ -349,6 +349,7 @@ function AdminDashboardPage() {
 
   return (
     <div style={styles.page}>
+      {/* TopNav already used globally; no special handling for admin is needed */}
       <TopNav />
       <main style={styles.main}>
         <div style={styles.leftCol}>
@@ -360,7 +361,6 @@ function AdminDashboardPage() {
               </div>
               {error && <div style={styles.error}>{error}</div>}
             </div>
-
             <div style={styles.pillTabs}>
               <button
                 type="button"
@@ -383,13 +383,6 @@ function AdminDashboardPage() {
               >
                 Plans
               </button>
-              <button
-                type="button"
-                style={styles.pill(activeSection === "appointments")}
-                onClick={() => setActiveSection("appointments")}
-              >
-                Appointments
-              </button>
             </div>
           </div>
 
@@ -402,32 +395,36 @@ function AdminDashboardPage() {
               <span style={styles.sectionTitle}>Latest users</span>
               <span style={styles.sectionHint}>Recently registered accounts.</span>
             </div>
-
-            <div style={styles.tableWrapper}>
-              {latestUsers.length === 0 ? (
-                <div style={styles.empty}>No users found.</div>
-              ) : (
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Name</th>
-                      <th style={styles.th}>Email</th>
-                      <th style={styles.th}>Role</th>
-                      <th style={styles.th}>Joined</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {latestUsers.map((u) => (
-                      <tr key={u.id} onClick={() => handleUserRowClick(u)}>
-                        <td style={styles.td}>{u.name}</td>
-                        <td style={styles.td}>{u.email}</td>
-                        <td style={styles.td}>{u.role}</td>
-                        <td style={styles.td}>{u.createdAt || "—"}</td>
+            <div>
+              <div style={styles.tableWrapper}>
+                {latestUsers.length === 0 ? (
+                  <div style={styles.empty}>No users found.</div>
+                ) : (
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Name</th>
+                        <th style={styles.th}>Email</th>
+                        <th style={styles.th}>Role</th>
+                        <th style={styles.th}>Joined</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    </thead>
+                    <tbody>
+                      {latestUsers.map((u) => (
+                        <tr
+                          key={u.id}
+                          onClick={() => handleUserRowClick(u)}
+                        >
+                          <td style={styles.td}>{u.name}</td>
+                          <td style={styles.td}>{u.email}</td>
+                          <td style={styles.td}>{u.role}</td>
+                          <td style={styles.td}>{u.createdAt}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </div>
           </div>
 

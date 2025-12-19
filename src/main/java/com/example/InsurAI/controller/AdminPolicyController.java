@@ -3,6 +3,8 @@ package com.example.InsurAI.controller;
 import com.example.InsurAI.dto.PolicyPlanCreateUpdateRequest;
 import com.example.InsurAI.dto.PolicyPlanDto;
 import com.example.InsurAI.service.AdminPolicyService;
+import com.example.InsurAI.service.AdminPolicyService.PolicyCategoryStat;
+import com.example.InsurAI.service.AdminPolicyService.PolicyUsageStat;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,30 +19,37 @@ public class AdminPolicyController {
 
     private final AdminPolicyService adminPolicyService;
 
-    @GetMapping
+    @GetMapping("/plans")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<PolicyPlanDto>> listAll() {
-        return ResponseEntity.ok(adminPolicyService.listAll());
+    public ResponseEntity<List<PolicyPlanDto>> listAllPlans() {
+        return ResponseEntity.ok(adminPolicyService.listAllPlans());
     }
 
-    @PostMapping
+    @PostMapping("/plans")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PolicyPlanDto> create(
-            @RequestBody PolicyPlanCreateUpdateRequest req
+    public ResponseEntity<PolicyPlanDto> createPlan(
+            @RequestBody PolicyPlanCreateUpdateRequest request
     ) {
-        return ResponseEntity.ok(adminPolicyService.create(req));
+        return ResponseEntity.ok(adminPolicyService.createPlan(request));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/plans/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PolicyPlanDto> update(
+    public ResponseEntity<PolicyPlanDto> updatePlan(
             @PathVariable Long id,
-            @RequestBody PolicyPlanCreateUpdateRequest req
+            @RequestBody PolicyPlanCreateUpdateRequest request
     ) {
-        return ResponseEntity.ok(adminPolicyService.update(id, req));
+        return ResponseEntity.ok(adminPolicyService.updatePlan(id, request));
     }
 
-    @PutMapping("/{id}/status")
+    @DeleteMapping("/plans/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deletePlan(@PathVariable Long id) {
+        adminPolicyService.deletePlan(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/plans/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PolicyPlanDto> updateStatus(
             @PathVariable Long id,
@@ -49,9 +58,17 @@ public class AdminPolicyController {
         return ResponseEntity.ok(adminPolicyService.updateStatus(id, active));
     }
 
-    // Public endpoint for PlansPage
-    @GetMapping("/public/active")
-    public ResponseEntity<List<PolicyPlanDto>> listActivePublic() {
-        return ResponseEntity.ok(adminPolicyService.listActive());
+    // ---- NEW: Policy charts endpoints ----
+
+    @GetMapping("/stats/categories")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<PolicyCategoryStat>> getCategoryStats() {
+        return ResponseEntity.ok(adminPolicyService.getCategoryStats());
+    }
+
+    @GetMapping("/stats/usage")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<PolicyUsageStat>> getUsageStats() {
+        return ResponseEntity.ok(adminPolicyService.getUsageStats());
     }
 }

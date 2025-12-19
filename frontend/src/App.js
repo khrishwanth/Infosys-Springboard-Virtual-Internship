@@ -326,4 +326,3 @@ const persistAuth = (data) => {
 }
 
 export default App;
-

@@ -1,8 +1,10 @@
+// src/pages/AdminManagementPanel.js
 import React, { useEffect, useState } from "react";
-import { apiFetch } from "../apiClient";
+import {apiFetch} from "../apiClient";
 
 function AdminManagementPanel({ mode = "users", onSelectItem }) {
-  const [activeTab, setActiveTab] = useState(mode); // "users" | "policies"
+  const [activeTab, setActiveTab] = useState(mode === "policies" ? "policies" : "users");
+
   const [users, setUsers] = useState([]);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -10,14 +12,18 @@ function AdminManagementPanel({ mode = "users", onSelectItem }) {
 
   const [roleUpdateLoadingId, setRoleUpdateLoadingId] = useState(null);
   const [statusUpdateLoadingId, setStatusUpdateLoadingId] = useState(null);
-  const [planEdit, setPlanEdit] = useState(null); // {id?, name, category, premiumAmount, coverageAmount, active, description}
+
+  const [planEdit, setPlanEdit] = useState(null);
   const [planSaving, setPlanSaving] = useState(false);
+  const [planFile, setPlanFile] = useState(null);
 
   const [userStats, setUserStats] = useState([]);
   const [statsLoading, setStatsLoading] = useState(false);
 
-  const [planFile, setPlanFile] = useState(null);
-
+  // policy charts data
+  const [policyCategoryStats, setPolicyCategoryStats] = useState([]);
+  const [policyUsageStats, setPolicyUsageStats] = useState([]);
+  const [policyStatsLoading, setPolicyStatsLoading] = useState(false);
 
   const styles = {
     shell: {
@@ -201,13 +207,12 @@ function AdminManagementPanel({ mode = "users", onSelectItem }) {
   };
 
   const visibleUsers =
-    activeTab === "users"
-      ? users
-      : users.filter((u) => u.role === "AGENT");
+    activeTab === "users" ? users : users.filter((u) => u.role === "AGENT");
 
-  useEffect(() => {
+    useEffect(() => {
     let cancelled = false;
-    setActiveTab(mode);
+    setActiveTab(mode === "policies" ? "policies" : "users");
+
     async function loadData() {
       try {
         setLoading(true);
@@ -224,13 +229,56 @@ function AdminManagementPanel({ mode = "users", onSelectItem }) {
         }
       } catch (err) {
         console.error("Failed to load admin data", err);
-        if (!cancelled) setError("Could not load admin data. Please try again.");
+        if (!cancelled) {
+          setError("Could not load admin data. Please try again.");
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    async function loadUserStats() {
+      try {
+        setStatsLoading(true);
+        const data = await apiFetch(
+          "http://localhost:8080/api/admin/users/stats/daily?days=14"
+        );
+        if (cancelled) return;
+        setUserStats(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to load user stats", err);
+      } finally {
+        if (!cancelled) {
+          setStatsLoading(false);
+        }
+      }
+    }
+
+    async function loadPolicyStats() {
+      try {
+        setPolicyStatsLoading(true);
+        const [catRes, usageRes] = await Promise.all([
+          apiFetch("http://localhost:8080/api/admin/policies/stats/categories"),
+          apiFetch("http://localhost:8080/api/admin/policies/stats/usage"),
+        ]);
+        if (cancelled) return;
+        setPolicyCategoryStats(Array.isArray(catRes) ? catRes : []);
+        setPolicyUsageStats(Array.isArray(usageRes) ? usageRes : []);
+      } catch (err) {
+        console.error("Failed to load policy stats", err);
+      } finally {
+        if (!cancelled) {
+          setPolicyStatsLoading(false);
+        }
       }
     }
 
     loadData();
+    loadUserStats();
+    loadPolicyStats();
+
     return () => {
       cancelled = true;
     };
@@ -370,6 +418,153 @@ function AdminManagementPanel({ mode = "users", onSelectItem }) {
       console.error("Failed to update plan status", err);
       setError("Could not update policy status. Please try again.");
     }
+  };
+
+    const buildBarChartData = (items, valueKey) => {
+    if (!items || items.length === 0) return null;
+
+    const width = 360;
+    const height = 110;
+    const padding = 16;
+
+    const maxValue = Math.max(
+      ...items.map((i) => Number(i[valueKey] || 0)),
+      1
+    );
+    const barWidth =
+      (width - padding * 2) / Math.max(items.length, 1) - 4;
+
+    return {
+      width,
+      height,
+      padding,
+      barWidth,
+      maxValue,
+    };
+  };
+
+  const renderPolicyCharts = () => {
+    if (activeTab !== "policies") return null;
+
+    if (policyStatsLoading) {
+      return (
+        <div style={styles.chartCard}>
+          <div style={styles.smallText}>Loading policy stats...</div>
+        </div>
+      );
+    }
+
+    const catData = buildBarChartData(policyCategoryStats, "totalPolicies");
+    const usageData = buildBarChartData(policyUsageStats, "usageCount");
+
+    return (
+      <>
+        <div style={styles.chartCard}>
+          <div style={styles.chartTitle}>
+            Total policies by category
+          </div>
+          <div style={styles.chartCanvas}>
+            {catData && policyCategoryStats.length > 0 ? (
+              <svg
+                style={styles.chartSvg}
+                viewBox={`0 0 ${catData.width} ${catData.height}`}
+              >
+                {policyCategoryStats.map((c, idx) => {
+                  const value = Number(c.totalPolicies || 0);
+                  const x =
+                    catData.padding +
+                    idx * (catData.barWidth + 4);
+                  const barHeight =
+                    (value / catData.maxValue) *
+                    (catData.height - catData.padding * 2);
+                  const y =
+                    catData.height -
+                    catData.padding -
+                    barHeight;
+                  return (
+                    <g key={c.category || idx}>
+                      <rect
+                        x={x}
+                        y={y}
+                        width={catData.barWidth}
+                        height={barHeight}
+                        fill="#3b82f6"
+                        rx="3"
+                      />
+                      <text
+                        x={x + catData.barWidth / 2}
+                        y={catData.height - 2}
+                        textAnchor="middle"
+                        style={styles.chartAxisLabel}
+                      >
+                        {(c.category || "").slice(0, 6)}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            ) : (
+              <div style={styles.smallText}>
+                No policy category stats available.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={styles.chartCard}>
+          <div style={styles.chartTitle}>
+            Policy category usage
+          </div>
+          <div style={styles.chartCanvas}>
+            {usageData && policyUsageStats.length > 0 ? (
+              <svg
+                style={styles.chartSvg}
+                viewBox={`0 0 ${usageData.width} ${usageData.height}`}
+              >
+                {policyUsageStats.map((c, idx) => {
+                  const value = Number(c.usageCount || 0);
+                  const x =
+                    usageData.padding +
+                    idx * (usageData.barWidth + 4);
+                  const barHeight =
+                    (value / usageData.maxValue) *
+                    (usageData.height -
+                      usageData.padding * 2);
+                  const y =
+                    usageData.height -
+                    usageData.padding -
+                    barHeight;
+                  return (
+                    <g key={c.category || idx}>
+                      <rect
+                        x={x}
+                        y={y}
+                        width={usageData.barWidth}
+                        height={barHeight}
+                        fill="#22c55e"
+                        rx="3"
+                      />
+                      <text
+                        x={x + usageData.barWidth / 2}
+                        y={usageData.height - 2}
+                        textAnchor="middle"
+                        style={styles.chartAxisLabel}
+                      >
+                        {(c.category || "").slice(0, 6)}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            ) : (
+              <div style={styles.smallText}>
+                No policy usage stats available.
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
   };
 
   const renderUsersTable = () => (
@@ -791,57 +986,57 @@ function AdminManagementPanel({ mode = "users", onSelectItem }) {
 
       {error && <div style={styles.error}>{error}</div>}
 
-            {activeTab === "users" ? (
-        <>
-          {renderUsersTable()}
-          <div style={styles.chartCard}>
-            <div style={styles.chartTitle}>
-              New customers per day (last 14 days)
-            </div>
-            {statsLoading && (
-              <div style={styles.smallText}>Loading stats...</div>
-            )}
-            {!statsLoading && (!userStats || userStats.length === 0) && (
-              <div style={styles.smallText}>No stats available.</div>
-            )}
-            {!statsLoading && userStats && userStats.length > 0 && (
-              <div style={styles.chartCanvas}>
-                {(() => {
-                  const data = buildChartData();
-                  if (!data) return null;
-                  return (
-                    <svg
-                      style={styles.chartSvg}
-                      viewBox={`0 0 ${data.width} ${data.height}`}
-                    >
-                      <path
-                        d={data.customerPath}
-                        style={{
-                          ...styles.chartLine,
-                          stroke: "#3b82f6",
-                        }}
-                      />
-                      {/* x-axis labels (every few days to avoid clutter) */}
-                      {data.xLabels.map((l, i) =>
-                        i % 3 === 0 ? (
-                          <text
-                            key={l.idx}
-                            x={
-                              data.padding +
-                              (l.idx /
-                                Math.max(data.xLabels.length - 1, 1)) *
-                                (data.width - data.padding * 2)
-                            }
-                            y={data.height - 2}
-                            textAnchor="middle"
-                            style={styles.chartAxisLabel}
-                          >
-                            {l.date.slice(5)}
-                          </text>
-                        ) : null
-                      )}
-                    </svg>
-                  );
+        {activeTab === "users" ? (
+          <>
+            {renderUsersTable()}
+            <div style={styles.chartCard}>
+              <div style={styles.chartTitle}>
+                New customers per day (last 14 days)
+              </div>
+              {statsLoading && (
+                <div style={styles.smallText}>Loading stats...</div>
+              )}
+              {!statsLoading && (!userStats || userStats.length === 0) && (
+                <div style={styles.smallText}>No stats available.</div>
+              )}
+              {!statsLoading && userStats && userStats.length > 0 && (
+                <div style={styles.chartCanvas}>
+                  {(() => {
+                    const data = buildChartData();
+                    if (!data) return null;
+                    return (
+                      <svg
+                        style={styles.chartSvg}
+                        viewBox={`0 0 ${data.width} ${data.height}`}
+                      >
+                        <path
+                          d={data.customerPath}
+                          style={{
+                            ...styles.chartLine,
+                            stroke: "#3b82f6",
+                          }}
+                        />
+                        {/* x-axis labels (every few days to avoid clutter) */}
+                        {data.xLabels.map((l, i) =>
+                          i % 3 === 0 ? (
+                            <text
+                              key={l.idx}
+                              x={
+                                data.padding +
+                                (l.idx /
+                                  Math.max(data.xLabels.length - 1, 1)) *
+                                  (data.width - data.padding * 2)
+                              }
+                              y={data.height - 2}
+                              textAnchor="middle"
+                              style={styles.chartAxisLabel}
+                            >
+                              {l.date.slice(5)}
+                            </text>
+                          ) : null
+                        )}
+                      </svg>
+                    );
                 })()}
               </div>
             )}
@@ -902,9 +1097,9 @@ function AdminManagementPanel({ mode = "users", onSelectItem }) {
       ) : (
         renderPlansTable()
       )}
+      {activeTab === "policies" && renderPolicyCharts()}
     </div>
   );
 }
 
 export default AdminManagementPanel;
-
