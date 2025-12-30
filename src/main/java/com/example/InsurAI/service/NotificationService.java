@@ -13,6 +13,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.example.InsurAI.entity.UserRole.ADMIN;
+
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -95,4 +97,21 @@ public class NotificationService {
                 n.getCreatedAt().toString()
         );
     }
+
+    public void notifyAdminsAboutSupportTicket(String type, String title, String message) {
+        List<User> admins = userRepository.findByRole(ADMIN); // add such finder if not present
+
+        for (User admin : admins) {
+            notifyUser(admin.getId(), type, title, message);
+        }
+    }
+
+    public void notifyUserAboutSupportReply(Long userId, String ticketSubject, String replyMessage) {
+        String title = "Support reply: " + ticketSubject;
+        String message = replyMessage.length() > 200
+                ? replyMessage.substring(0, 197) + "..."
+                : replyMessage;
+        notifyUser(userId, "SUPPORT_REPLY", title, message);
+    }
+
 }

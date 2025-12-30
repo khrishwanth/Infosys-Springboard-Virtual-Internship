@@ -23,7 +23,7 @@ public class AdminUserController {
 
     // ===================== USERS LIST & MANAGEMENT =====================
 
-    // Used by AdminManagementPanel: GET http://localhost:8080/api/admin/users
+
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<AdminUserDto>> listAllUsers() {
@@ -64,7 +64,7 @@ public class AdminUserController {
 
     // ===================== DASHBOARD SUMMARY =====================
 
-    // Used by frontend: GET http://localhost:8080/api/admin/dashboard/summary
+
     @GetMapping("/dashboard/summary")
     @PreAuthorize("hasRole('ADMIN')")
     public AdminDashboardSummary getDashboardSummary() {
@@ -73,15 +73,6 @@ public class AdminUserController {
 
     // ===================== DAILY STATS =====================
 
-    // Frontend (AdminDashboardPage) currently calls:
-    // /api/admin/users/stats/daily?days=14  and  /api/admin/users/appointments/daily?days=14
-    // To keep that working, you can either:
-    // 1) Adjust frontend URLs, or
-    // 2) Add small wrapper endpoints here that map to these methods.
-    // Below keeps your earlier /stats/... URLs used elsewhere AND adds wrappers
-    // matching the existing React code.
-
-    // Generic users daily stats (can be used in reports, etc.)
     @GetMapping("/stats/users/daily")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<DailyUserStatDto>> dailyUserStats(
@@ -108,7 +99,7 @@ public class AdminUserController {
 
     // ---- Wrapper endpoints matching AdminDashboardPage.js URLs ----
 
-    // GET /api/admin/users/stats/daily?days=14
+
     @GetMapping("/users/stats/daily")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<DailyUserStatDto>> dailyUserStatsForDashboard(
@@ -117,7 +108,7 @@ public class AdminUserController {
         return ResponseEntity.ok(adminUserService.getDailyUserStats(days));
     }
 
-    // GET /api/admin/users/appointments/daily?days=14
+
     @GetMapping("/users/appointments/daily")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<DailyUserStatDto>> dailyAppointmentStatsForDashboard(
@@ -128,21 +119,21 @@ public class AdminUserController {
 
     // ===================== RECENT ITEMS FOR DASHBOARD =====================
 
-    // GET /api/admin/users/appointments/recent
+
     @GetMapping("/users/appointments/recent")
     @PreAuthorize("hasRole('ADMIN')")
     public List<AppointmentResponse> getRecentAppointmentsAdmin() {
         return appointmentService.getRecentAppointmentsForAdmin();
     }
 
-    // GET /api/admin/users/latest
+
     @GetMapping("/users/latest")
     @PreAuthorize("hasRole('ADMIN')")
     public List<AdminUserDto> getLatestUsers() {
         return adminUserService.getLatestUsers();
     }
 
-    // Extra: list only agents (if needed by other UIs)
+
     @GetMapping("/users/agents")
     @PreAuthorize("hasRole('ADMIN')")
     public List<AdminUserDto> listAgents() {

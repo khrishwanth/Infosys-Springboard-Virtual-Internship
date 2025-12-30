@@ -3,7 +3,6 @@ package com.example.InsurAI.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -35,11 +34,35 @@ public class PolicyPlan {
     @Column(length = 500)
     private String description;
 
+    // =============== FILE STORAGE FIELDS ===============
+    @Column(length = 255)
+    private String fileName; // e.g., "policy_document.pdf"
+
+    @Column(name = "file_content", columnDefinition = "LONGBLOB")
+    private byte[] fileContent; // Binary data of the file (max ~4GB in MySQL)
+
+    @Column(length = 50)
+    private String fileContentType; // e.g., "application/pdf"
+
+    @Column(name = "file_uploaded_at")
+    private LocalDateTime fileUploadedAt; // Track when file was uploaded
+
+    @Column(length = 100)
+    private String fileOriginalName; // Original name uploaded by user
+
+    // ====================================================
+
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     @Column(nullable = false)
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    public void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
 
     @PreUpdate
     public void onUpdate() {
