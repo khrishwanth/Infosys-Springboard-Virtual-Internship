@@ -24,5 +24,3 @@ This project demonstrates role-based access, policy handling, and backend automa
 - Git & GitHub
 
 ---
-
-## 📂 Project Structure
